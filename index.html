@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#241b16"><link rel="manifest" href="manifest.webmanifest">
+<title>مجوهرات الشدادي</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f5f1eb;color:#241b16;font-family:Arial,sans-serif}
+header{background:#241b16;color:#f4d99a;padding:22px 16px;text-align:center}
+h1{margin:0 0 6px;font-size:23px}header small{color:#e8d9bd}
+main{max-width:760px;margin:auto;padding:14px}.card{background:white;border-radius:14px;padding:15px;margin:12px 0;box-shadow:0 2px 12px #0000000c}
+label{display:block;margin:10px 0 5px;font-weight:bold}input,select,textarea,button{width:100%;padding:12px;border:1px solid #d8cfc3;border-radius:9px;font-size:16px;background:white}
+button{background:#76552d;color:white;border:0;font-weight:bold;margin-top:10px}button.secondary{background:#eee5d9;color:#241b16}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:9px}.muted{color:#756b61;font-size:13px}.item{border-bottom:1px solid #eee;padding:10px 0}.item b{display:block}.pill{font-size:12px;color:#76552d}
+#lock{max-width:420px;margin:40px auto}.danger{background:#8b3025}.hidden{display:none}
+</style></head>
+<body>
+<header><h1>مجوهرات الشدادي</h1><small>نظام أمان الذهب وإدارة القطع</small></header>
+<main>
+<section id="lock" class="card"><h3>قفل البرنامج</h3><p class="muted">أنشئ رمزاً خاصاً من 4 أرقام على الأقل. لا تشاركه مع أحد.</p>
+<label>الرمز السري</label><input id="pin" type="password" inputmode="numeric" placeholder="أدخل الرمز">
+<button id="unlock">دخول / إنشاء الرمز</button><p id="pinmsg" class="muted"></p></section>
+<div id="app" class="hidden">
+<section class="card"><h3>إضافة قطعة جديدة</h3>
+<div class="row"><div><label>نوع القطعة</label><select id="kind"><option value="R">خاتم</option><option value="M">محبس</option></select></div><div><label>الوزن الأصلي (جم)</label><input id="weight" type="number" step="0.01" min="0" placeholder="مثال 4.25"></div></div>
+<div class="row"><div><label>رقم العلبة</label><input id="box" placeholder="مثال 3"></div><div><label>العيار</label><input id="karat" placeholder="21"></div></div>
+<label>وصف / علامة مميزة</label><textarea id="desc" rows="2" placeholder="وصف يميز القطعة"></textarea>
+<button id="add">حفظ القطعة</button><p class="muted">يُنشأ رقم مستقل لكل قطعة. أضف صورة أو علامة تعريف خارجياً عند الحاجة لزيادة دقة التمييز.</p>
+</section>
+<section class="card"><h3>بحث وفحص قطعة</h3><label>رقم القطعة</label><input id="searchid" placeholder="R-00001">
+<div class="row"><button id="lookup">عرض القطعة</button><button class="secondary" id="weigh">تسجيل فحص وزن</button></div><div id="detail"></div>
+<label>الوزن الحالي عند الفحص (جم)</label><input id="currentweight" type="number" step="0.01" placeholder="ضع الوزن على الميزان">
+</section>
+<section class="card"><h3>المخزون</h3><div id="summary" class="muted"></div><div id="items"></div></section>
+<section class="card"><h3>حركة القطع</h3><label>رقم القطعة</label><input id="moveid" placeholder="R-00001">
+<label>رقم العلبة الجديدة</label><input id="newbox" placeholder="رقم العلبة">
+<button id="move">تسجيل نقل</button>
+<label>بيع قطعة نهائياً من المخزون</label><input id="sellid" placeholder="رقم القطعة">
+<button class="danger" id="sell">تسجيل البيع</button>
+</section>
+<section class="card"><h3>النسخ الاحتياطي</h3><p class="muted">صدّر نسخة واحتفظ بها في تطبيق «الملفات» أو iCloud Drive. النسخة الحالية لا تزامن تلقائياً مع iCloud.</p>
+<button id="backup">تنزيل نسخة احتياطية</button><label>استعادة نسخة JSON</label><input id="restorefile" type="file" accept="application/json"><button class="secondary" id="restore">استعادة البيانات</button>
+</section>
+</div></main>
+<script>
+const $=id=>document.getElementById(id), DB='shaddadi_gold_v1';
+let data={items:[],moves:[],seq:{R:0,M:0}};
+function load(){try{data=JSON.parse(localStorage.getItem(DB))||data}catch(e){}}
+function save(){localStorage.setItem(DB,JSON.stringify(data));render()}
+function render(){
+ let active=data.items.filter(x=>!x.sold);$('summary').textContent=`إجمالي القطع: ${data.items.length} | الموجودة: ${active.length} | المباعة: ${data.items.length-active.length}`;
+ $('items').innerHTML=active.slice().reverse().map(x=>`<div class="item"><b>${x.id} — ${x.kind==='R'?'خاتم':'محبس'}</b><span>${x.weight.toFixed(2)} جم | العلبة: ${x.box||'—'} | العيار: ${x.karat||'—'}</span><div class="muted">${esc(x.desc||'')}</div></div>`).join('')||'لا توجد قطع مسجلة بعد';
+}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function get(id){return data.items.find(x=>x.id===id.trim().toUpperCase())}
+$('unlock').onclick=async()=>{let p=$('pin').value;if(p.length<4){$('pinmsg').textContent='الرمز يجب أن يكون 4 أرقام على الأقل';return}
+ let saved=localStorage.getItem('shaddadi_pin');if(!saved){localStorage.setItem('shaddadi_pin',p);$('pinmsg').textContent='تم إنشاء الرمز';}else if(saved!==p){$('pinmsg').textContent='الرمز غير صحيح';return}
+ $('lock').classList.add('hidden');$('app').classList.remove('hidden');load();render()};
+$('add').onclick=()=>{let k=$('kind').value,w=Number($('weight').value);if(!(w>0)){alert('أدخل الوزن الصحيح');return}
+ data.seq[k]=(data.seq[k]||0)+1;let id=k+'-'+String(data.seq[k]).padStart(5,'0');
+ data.items.push({id,kind:k,weight:w,box:$('box').value,karat:$('karat').value,desc:$('desc').value,created:new Date().toISOString(),checks:[],sold:false});
+ ['weight','box','karat','desc'].forEach(x=>$(x).value='');save();alert('تم حفظ القطعة برقم '+id)};
+$('lookup').onclick=()=>{let x=get($('searchid').value);$('detail').textContent=x?`${x.id} | الوزن الأصلي ${x.weight.toFixed(2)} جم | العلبة ${x.box||'—'} | الحالة ${x.sold?'مباعة':'في المخزون'}`:'لم يتم العثور على القطعة'};
+$('weigh').onclick=()=>{let x=get($('searchid').value),w=Number($('currentweight').value);if(!x||!(w>0)){alert('تحقق من رقم القطعة والوزن');return}let d=+(w-x.weight).toFixed(2);x.checks.push({date:new Date().toISOString(),weight:w,diff:d});save();alert(`فرق الوزن: ${d.toFixed(2)} جم`+(Math.abs(d)>=0.02?' — تنبيه: راجع القطعة':' — ضمن الحد'))};
+$('move').onclick=()=>{let x=get($('moveid').value);if(!x||x.sold){alert('القطعة غير موجودة أو مباعة');return}data.moves.push({id:x.id,from:x.box,to:$('newbox').value,date:new Date().toISOString()});x.box=$('newbox').value;save();alert('تم تسجيل النقل')};
+$('sell').onclick=()=>{let x=get($('sellid').value);if(!x||x.sold){alert('القطعة غير موجودة أو مباعة');return}if(confirm('تأكيد تسجيل بيع '+x.id+'؟')){x.sold=true;x.soldAt=new Date().toISOString();save();alert('تم تسجيل البيع وحفظ سجل القطعة')}};
+$('backup').onclick=()=>{let blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='نسخة-مجوهرات-الشدادي.json';a.click();URL.revokeObjectURL(a.href)};
+$('restore').onclick=()=>{let f=$('restorefile').files[0];if(!f){alert('اختر ملف النسخة أولاً');return}let r=new FileReader();r.onload=()=>{try{let d=JSON.parse(r.result);if(!Array.isArray(d.items))throw 0;if(confirm('سيتم استبدال البيانات الحالية بالنسخة. متابعة؟')){data=d;save();alert('تمت الاستعادة')}}catch(e){alert('ملف النسخة غير صالح')}};r.readAsText(f)};
+load();
+if('serviceWorker' in navigator && location.protocol.startsWith('http'))navigator.serviceWorker.register('./sw.js').catch(()=>{});
+</script></body></html>
